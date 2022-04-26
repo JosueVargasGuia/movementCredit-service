@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import com.nttdata.movementCreditservice.FeignClient.FallBackImpl.TableIdFeignClientFallBack;
 
-@FeignClient(name="tableIdFeignClient", fallback = TableIdFeignClientFallBack.class)
+@FeignClient(name="${api.tableId-service.uri}", fallback = TableIdFeignClientFallBack.class)
 public interface TableIdFeignClient {
 
 	@GetMapping("/generateKey/{nameTable}")

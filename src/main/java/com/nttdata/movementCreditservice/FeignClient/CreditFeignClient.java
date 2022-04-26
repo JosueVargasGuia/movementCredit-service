@@ -8,7 +8,7 @@ import com.nttdata.movementCreditservice.FeignClient.FallBackImpl.CreditFeignCli
 import com.nttdata.movementCreditservice.model.Credit;
 
 
-@FeignClient(name="creditFeignClient",url="${api.credit-service.uri}", fallback = CreditFeignClientFallBack.class)
+@FeignClient(name="${api.credit-service.uri}", fallback = CreditFeignClientFallBack.class)
 public interface CreditFeignClient {
 
 	@GetMapping("/{id}")

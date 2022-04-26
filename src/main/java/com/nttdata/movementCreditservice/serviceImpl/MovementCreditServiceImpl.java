@@ -131,7 +131,7 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 		 */
 
 		Credit credit = creditFeignClient.creditfindById(idCredit);
-		log.info("CreditFeignClient: " + credit.toString());
+		//log.info("CreditFeignClient: " + credit.toString());
 		return credit;
 	}
 
