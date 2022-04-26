@@ -15,27 +15,46 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import com.netflix.discovery.converters.Auto;
+import com.nttdata.movementCreditservice.FeignClient.CreditFeignClient;
+import com.nttdata.movementCreditservice.FeignClient.TableIdFeignClient;
 import com.nttdata.movementCreditservice.entity.MovementCredit;
 import com.nttdata.movementCreditservice.entity.TypeMovementCredit;
 import com.nttdata.movementCreditservice.model.Credit;
+import com.nttdata.movementCreditservice.model.TableId;
 import com.nttdata.movementCreditservice.repository.MovementCreditRepository;
 import com.nttdata.movementCreditservice.service.MovementCreditService;
+
+import lombok.extern.log4j.Log4j2;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+@Log4j2
 @Service
 public class MovementCreditServiceImpl implements MovementCreditService {
-	Logger log = LoggerFactory.getLogger(MovementCreditService.class);
+	
+	
 	@Autowired
 	MovementCreditRepository movementCreditRepository;
+	
+	@Autowired
+	CreditFeignClient creditFeignClient;
+	
+	@Autowired
+	TableIdFeignClient tableIdFeignClient;
+	
 	@Autowired
 	RestTemplate restTemplate;
 	
-	@Value("${api.credit-service.uri}")
+	/*@Value("${api.credit-service.uri}")
 	private String creditService;
-
-@Value("${api.tableId-service.uri}")
+	 */
+	
+    @Value("${api.tableId-service.uri}")
 	String tableIdService;
+    
+    
 	@Override
 	public Flux<MovementCredit> findAll() {
 		return movementCreditRepository.findAll().sort((movementCredit1, movementCredit2) -> movementCredit1
@@ -120,7 +139,7 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 
 	@Override
 	public Credit findByIdCredit(Long idCredit) {
-		log.info(creditService + "/" + idCredit);
+		/*log.info(creditService + "/" + idCredit);
 		ResponseEntity<Credit> responseGet = restTemplate.exchange(creditService + "/" + idCredit, HttpMethod.GET, null,
 				new ParameterizedTypeReference<Credit>() {
 				});
@@ -128,7 +147,11 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 			return responseGet.getBody();
 		} else {
 			return null;
-		}
+		}*/
+		
+		Credit credit = creditFeignClient.creditfindById(idCredit);
+		log.info("CreditFeignClient: " + credit.toString());
+		return credit;
 	}
 
 	@Override
@@ -159,6 +182,7 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 	}
 	@Override
 	public Long generateKey(String nameTable) {
+		
 		log.info(tableIdService + "/generateKey/" + nameTable);
 		ResponseEntity<Long> responseGet = restTemplate.exchange(tableIdService + "/generateKey/" + nameTable, HttpMethod.GET,
 				null, new ParameterizedTypeReference<Long>() {
@@ -169,7 +193,14 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 		} else {
 			return Long.valueOf(0);
 		}
+		
+		
+		/*TableId tableId = tableIdFeignClient.tableIdFindId(nameTable);
+		log.info("TableIdFeignClient -> " + tableId.toString());
+		return Long.valueOf(String.valueOf(tableId));*/
 	}
+	
+	
 	/*
 	 * @Override public List<MovementCredit> findAllList() {
 	 * ResponseEntity<List<MovementCredit>> responseGet =
