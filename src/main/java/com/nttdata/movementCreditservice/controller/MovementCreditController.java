@@ -2,10 +2,12 @@ package com.nttdata.movementCreditservice.controller;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,12 +33,12 @@ public class MovementCreditController {
 
 	// RestTemplate restTemplate=new RestTemplate();
 
-	@GetMapping
+	@GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
 	public Flux<MovementCredit> findAll() {
 		return movementCreditService.findAll();
 	}
 
-	@PostMapping
+	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
 	public Mono<ResponseEntity<MovementCredit>> save(@RequestBody MovementCredit movementCredit) {
 		return movementCreditService.save(movementCredit)
 				.map(_movementCredit -> ResponseEntity.ok().body(_movementCredit)).onErrorResume(e -> {
@@ -45,7 +47,7 @@ public class MovementCreditController {
 				});
 	}
 
-	@GetMapping("/{idMovementCredit}")
+	@GetMapping(value= "/{idMovementCredit}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public Mono<ResponseEntity<MovementCredit>> findById(
 			@PathVariable(name = "idMovementCredit") long idMovementCredit) {
 		return movementCreditService.findById(idMovementCredit)
@@ -55,7 +57,7 @@ public class MovementCreditController {
 				}).defaultIfEmpty(ResponseEntity.noContent().build());
 	}
 
-	@PutMapping
+	@PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
 	public Mono<ResponseEntity<MovementCredit>> update(@RequestBody MovementCredit movementCredit) {
 
 		Mono<MovementCredit> mono = movementCreditService.findById(movementCredit.getIdMovementCredit())
@@ -74,7 +76,7 @@ public class MovementCreditController {
 
 	}
 
-	@DeleteMapping("/{idMovementCredit}")
+	@DeleteMapping(value= "/{idMovementCredit}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public Mono<ResponseEntity<Void>> delete(@PathVariable(name = "idMovementCredit") long idMovementCredit) {
 		return movementCreditService.findById(idMovementCredit).flatMap(movementCredit -> {
 			return movementCreditService.delete(movementCredit.getIdMovementCredit())
@@ -83,18 +85,18 @@ public class MovementCreditController {
 	}
 
 	//registro de movimientos de cuenta
-	@PostMapping("/recordsMovement")
+	@PostMapping(value="/recordsMovement")
 	public Mono<ResponseEntity<Map<String, Object>>> recordsMovement(@RequestBody MovementCredit movementCredit) {
 		return movementCreditService.recordsMovement(movementCredit).map(_val -> ResponseEntity.ok().body(_val))
 				.onErrorResume(e -> {
-					log.info("Status:" + HttpStatus.BAD_REQUEST + " menssage" + e.getMessage());
+					log.info("Status:" + HttpStatus.BAD_REQUEST + " message" + e.getMessage());
 					Map<String, Object> hashMap = new HashMap<>();
 					hashMap.put("Error", e.getMessage());
 					return Mono.just(ResponseEntity.badRequest().body(hashMap));
 				}).defaultIfEmpty(ResponseEntity.noContent().build());
 	}
 
-	@PostMapping("/balanceInquiry")
+	@PostMapping(value= "/balanceInquiry")
 	public Mono<ResponseEntity<Map<String, Object>>> balanceInquiry(
 			@RequestBody  Credit Credit) {
 		return movementCreditService.balanceInquiry(Credit).map(_val -> ResponseEntity.ok().body(_val))
