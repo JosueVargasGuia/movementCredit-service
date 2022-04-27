@@ -15,7 +15,11 @@ public class CreditFeignClientFallBack implements CreditFeignClient {
 	String creditFeignClient;
 
 	@Override
+//<<<<<<< Josue
 	public CreditAccount creditfindById(Long id) {
+
+	//public Credit creditfindById(Long id) {
+//>>>>>>> main
 		// Credit credit = new Credit();
 		// credit.setIdCredit(Long.valueOf(-1));
 		log.info("CreditFeignClientFallBack ->" + creditFeignClient + "/" + id);
