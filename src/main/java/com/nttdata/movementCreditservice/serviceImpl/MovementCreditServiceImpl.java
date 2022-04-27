@@ -73,13 +73,13 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 		Map<String, Object> hashMap = new HashMap<String, Object>();
 		Credit credit = this.findByIdCredit(movementCredit.getIdCredit());
 		if (credit != null) {
-			if (movementCredit.getTypeMovementCredit() == TypeMovementCredit.cargo) {
+			if (movementCredit.getTypeMovementCredit() == TypeMovementCredit.charge) {
 				return this.findAll().filter(o -> (o.getIdCredit() == movementCredit.getIdCredit()
 				// && o.getTypeMovementCredit() == TypeMovementCredit.cargo
 				))
 						//
 						.map(mov -> {
-							if (mov.getTypeMovementCredit() == TypeMovementCredit.cargo) {
+							if (mov.getTypeMovementCredit() == TypeMovementCredit.charge) {
 								mov.setAmount(-1 * mov.getAmount());
 							}
 							// log.info("Change:"+mov.toString());
@@ -92,7 +92,7 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 							log.info("Saldo disponible:" + (_saldo + credit.getAmountCreditLimit()));
 							if (movementCredit.getAmount() <= (_saldo + credit.getAmountCreditLimit())) {
 								log.info("Registra Movimiento:");
-								hashMap.put("CreditSucces", "Registro de movimiento de " + TypeMovementCredit.abono);
+								hashMap.put("CreditSucces", "Registro de movimiento de " + TypeMovementCredit.credit);
 								hashMap.put("Credit", movementCredit);
 								movementCredit.setDateMovement(Calendar.getInstance().getTime());
 								this.save(movementCredit).subscribe(e -> log.info("Save:" + e.toString()));
@@ -108,7 +108,7 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 			} else {
 				movementCredit.setDateMovement(Calendar.getInstance().getTime());
 				return this.save(movementCredit).map(_value -> {
-					hashMap.put("Credit", "Registro de movimiento de " + TypeMovementCredit.abono);
+					hashMap.put("Credit", "Registro de movimiento de " + TypeMovementCredit.charge);
 					return hashMap;
 				});
 
@@ -141,7 +141,7 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 		Credit credit = this.findByIdCredit(_credit.getIdCredit());
 		if (credit != null) {
 			return this.findAll().filter(o -> (o.getIdCredit() == credit.getIdCredit())).map(mov -> {
-				if (mov.getTypeMovementCredit() == TypeMovementCredit.cargo) {
+				if (mov.getTypeMovementCredit() == TypeMovementCredit.charge) {
 					mov.setAmount(-1 * mov.getAmount());
 				}
 				// log.info("Change:"+mov.toString());
