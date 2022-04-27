@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.nttdata.movementCreditservice.entity.MovementCredit;
 import com.nttdata.movementCreditservice.service.MovementCreditService;
-import com.nttdata.movementCreditservice.model.Credit;
+import com.nttdata.movementCreditservice.model.CreditAccount;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -98,8 +98,8 @@ public class MovementCreditController {
 
 	@PostMapping(value= "/balanceInquiry")
 	public Mono<ResponseEntity<Map<String, Object>>> balanceInquiry(
-			@RequestBody  Credit Credit) {
-		return movementCreditService.balanceInquiry(Credit).map(_val -> ResponseEntity.ok().body(_val))
+			@RequestBody  CreditAccount creditAccount) {
+		return movementCreditService.balanceInquiry(creditAccount).map(_val -> ResponseEntity.ok().body(_val))
 				.onErrorResume(e -> {
 					log.info("Status:" + HttpStatus.BAD_REQUEST + " menssage" + e.getMessage());
 					Map<String, Object> hashMap = new HashMap<>();

@@ -1,6 +1,7 @@
-package com.nttdata.movementCreditservice.entity;
+package com.nttdata.movementCreditservice.model;
 
 import java.util.Date;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -16,21 +17,16 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
-@Data
-@Document(collection = "movement_credit")
-public class MovementCredit {
-	@Id
-	private Long idMovementCredit;
-	private Long idCreditAccount;
-	private Double amount;
-	private Date dateMovement;
-	private TypeMovementCredit typeMovementCredit;
-	private Double commissionForTransaction;
+@AllArgsConstructor 
+@Data 
+public abstract class Account {	 
+	private Long idAccount;
+	private Long idCustomer;
+	private typeOfCurrency typeOfCurrency;
+	private String accountNumber;	
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss") 
 	private Date creationDate;
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
 	private Date dateModified;
-
 }
+//https://www.baeldung.com/jackson-jsonformat
