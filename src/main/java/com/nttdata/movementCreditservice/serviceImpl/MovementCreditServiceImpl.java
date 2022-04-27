@@ -13,7 +13,7 @@ import com.nttdata.movementCreditservice.FeignClient.CreditFeignClient;
 import com.nttdata.movementCreditservice.FeignClient.TableIdFeignClient;
 import com.nttdata.movementCreditservice.entity.MovementCredit;
 import com.nttdata.movementCreditservice.entity.TypeMovementCredit;
-import com.nttdata.movementCreditservice.model.Credit;
+import com.nttdata.movementCreditservice.model.CreditAccount;
 import com.nttdata.movementCreditservice.repository.MovementCreditRepository;
 import com.nttdata.movementCreditservice.service.MovementCreditService;
 
@@ -48,6 +48,7 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 		Long key = generateKey(MovementCredit.class.getSimpleName());
 		if (key >= 1) {
 			movementCredit.setIdMovementCredit(key);
+			movementCredit.setCreationDate(Calendar.getInstance().getTime());
 			log.info("SAVE[product]:" + movementCredit.toString());
 		}
 		return movementCreditRepository.insert(movementCredit);
@@ -71,10 +72,10 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 	@Override
 	public Mono<Map<String, Object>> recordsMovement(MovementCredit movementCredit) {
 		Map<String, Object> hashMap = new HashMap<String, Object>();
-		Credit credit = this.findByIdCredit(movementCredit.getIdCredit());
+		CreditAccount credit = this.findByIdCredit(movementCredit.getIdCreditAccount());
 		if (credit != null) {
 			if (movementCredit.getTypeMovementCredit() == TypeMovementCredit.charge) {
-				return this.findAll().filter(o -> (o.getIdCredit() == movementCredit.getIdCredit()
+				return this.findAll().filter(o -> (o.getIdCreditAccount() == movementCredit.getIdCreditAccount()
 				// && o.getTypeMovementCredit() == TypeMovementCredit.cargo
 				))
 						//
@@ -121,7 +122,7 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 	}
 
 	@Override
-	public Credit findByIdCredit(Long idCredit) {
+	public CreditAccount findByIdCredit(Long idCreditAccount) {
 		/*
 		 * log.info(creditService + "/" + idCredit); ResponseEntity<Credit> responseGet
 		 * = restTemplate.exchange(creditService + "/" + idCredit, HttpMethod.GET, null,
@@ -130,17 +131,17 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 		 * responseGet.getBody(); } else { return null; }
 		 */
 
-		Credit credit = creditFeignClient.creditfindById(idCredit);
+		CreditAccount credit = creditFeignClient.creditfindById(idCreditAccount);
 		//log.info("CreditFeignClient: " + credit.toString());
 		return credit;
 	}
 
 	@Override
-	public Mono<Map<String, Object>> balanceInquiry(Credit _credit) {
+	public Mono<Map<String, Object>> balanceInquiry(CreditAccount _creditAccount) {
 		Map<String, Object> hashMap = new HashMap<String, Object>();
-		Credit credit = this.findByIdCredit(_credit.getIdCredit());
+		CreditAccount credit = this.findByIdCredit(_creditAccount.getIdCreditAccount());
 		if (credit != null) {
-			return this.findAll().filter(o -> (o.getIdCredit() == credit.getIdCredit())).map(mov -> {
+			return this.findAll().filter(o -> (o.getIdCreditAccount() == credit.getIdCreditAccount())).map(mov -> {
 				if (mov.getTypeMovementCredit() == TypeMovementCredit.charge) {
 					mov.setAmount(-1 * mov.getAmount());
 				}
