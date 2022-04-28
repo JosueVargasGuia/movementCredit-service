@@ -93,13 +93,13 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 							log.info("Saldo disponible:" + (_saldo + credit.getAmountCreditLimit()));
 							if (movementCredit.getAmount() <= (_saldo + credit.getAmountCreditLimit())) {
 								log.info("Registra Movimiento:");
-								hashMap.put("CreditSucces", "Registro de movimiento de " + TypeMovementCredit.credit);
+								hashMap.put("CreditSucces", "Registro de movimiento de " + movementCredit.getTypeMovementCredit());
 								hashMap.put("Credit", movementCredit);
 								movementCredit.setDateMovement(Calendar.getInstance().getTime());
 								this.save(movementCredit).subscribe(e -> log.info("Save:" + e.toString()));
 
 							} else {
-								hashMap.put("Credit",
+								hashMap.put("CreditAccount",
 										"El saldo de la cuenta de credito supera el limite de credito.Saldo disponible:"
 												+ (_saldo + credit.getAmountCreditLimit()));
 								log.info("El cargo a la cuenta de credito supera el limite de credito.");
@@ -109,7 +109,7 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 			} else {
 				movementCredit.setDateMovement(Calendar.getInstance().getTime());
 				return this.save(movementCredit).map(_value -> {
-					hashMap.put("Credit", "Registro de movimiento de " + TypeMovementCredit.charge);
+					hashMap.put("CreditAccount", "Registro de movimiento de " + TypeMovementCredit.charge);
 					return hashMap;
 				});
 
