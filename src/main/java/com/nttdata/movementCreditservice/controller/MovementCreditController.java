@@ -47,7 +47,7 @@ public class MovementCreditController {
 				});
 	}
 
-	@GetMapping(value= "/{idMovementCredit}", produces = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(value = "/{idMovementCredit}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public Mono<ResponseEntity<MovementCredit>> findById(
 			@PathVariable(name = "idMovementCredit") long idMovementCredit) {
 		return movementCreditService.findById(idMovementCredit)
@@ -76,16 +76,23 @@ public class MovementCreditController {
 
 	}
 
-	@DeleteMapping(value= "/{idMovementCredit}", produces = MediaType.APPLICATION_JSON_VALUE)
-	public Mono<ResponseEntity<Void>> delete(@PathVariable(name = "idMovementCredit") long idMovementCredit) {
+	@DeleteMapping(value = "/{idMovementCredit}", produces = MediaType.APPLICATION_JSON_VALUE)
+	public Mono<ResponseEntity<Void>>  delete(@PathVariable(name = "idMovementCredit") long idMovementCredit) {
+		/*return movementCreditService.findById(idMovementCredit).map(movementCredit -> {
+			movementCreditService.delete(movementCredit.getIdMovementCredit());
+			return ResponseEntity.ok().body(movementCredit);
+		}).onErrorResume(e -> {
+			log.info("Status:" + HttpStatus.BAD_REQUEST + " menssage" + e.getMessage());
+			return Mono.just(ResponseEntity.badRequest().build());
+		}).defaultIfEmpty(ResponseEntity.noContent().build());*/
 		return movementCreditService.findById(idMovementCredit).flatMap(movementCredit -> {
 			return movementCreditService.delete(movementCredit.getIdMovementCredit())
 					.then(Mono.just(ResponseEntity.ok().build()));
 		});
 	}
 
-	//registro de movimientos de cuenta
-	@PostMapping(value="/recordsMovement")
+	// registro de movimientos de cuenta
+	@PostMapping(value = "/recordsMovement")
 	public Mono<ResponseEntity<Map<String, Object>>> recordsMovement(@RequestBody MovementCredit movementCredit) {
 		return movementCreditService.recordsMovement(movementCredit).map(_val -> ResponseEntity.ok().body(_val))
 				.onErrorResume(e -> {
@@ -96,9 +103,8 @@ public class MovementCreditController {
 				}).defaultIfEmpty(ResponseEntity.noContent().build());
 	}
 
-	@PostMapping(value= "/balanceInquiry")
-	public Mono<ResponseEntity<Map<String, Object>>> balanceInquiry(
-			@RequestBody  CreditAccount creditAccount) {
+	@PostMapping(value = "/balanceInquiry")
+	public Mono<ResponseEntity<Map<String, Object>>> balanceInquiry(@RequestBody CreditAccount creditAccount) {
 		return movementCreditService.balanceInquiry(creditAccount).map(_val -> ResponseEntity.ok().body(_val))
 				.onErrorResume(e -> {
 					log.info("Status:" + HttpStatus.BAD_REQUEST + " menssage" + e.getMessage());

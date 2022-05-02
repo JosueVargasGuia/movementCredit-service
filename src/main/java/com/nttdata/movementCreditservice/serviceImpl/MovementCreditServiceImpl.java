@@ -1,6 +1,8 @@
 package com.nttdata.movementCreditservice.serviceImpl;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -9,11 +11,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+ 
+import com.nttdata.movementCreditservice.FeignClient.ConfigurationFeingClient;
 import com.nttdata.movementCreditservice.FeignClient.CreditFeignClient;
+import com.nttdata.movementCreditservice.FeignClient.ProductFeignClient;
 import com.nttdata.movementCreditservice.FeignClient.TableIdFeignClient;
 import com.nttdata.movementCreditservice.entity.MovementCredit;
 import com.nttdata.movementCreditservice.entity.TypeMovementCredit;
+import com.nttdata.movementCreditservice.model.Configuration;
 import com.nttdata.movementCreditservice.model.CreditAccount;
+import com.nttdata.movementCreditservice.model.Product;
 import com.nttdata.movementCreditservice.repository.MovementCreditRepository;
 import com.nttdata.movementCreditservice.service.MovementCreditService;
 
@@ -37,6 +44,11 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 	@Autowired
 	RestTemplate restTemplate;
 
+	@Autowired
+	ProductFeignClient productFeignClient;
+	@Autowired
+	ConfigurationFeingClient configurationFeingClient;
+
 	@Override
 	public Flux<MovementCredit> findAll() {
 		return movementCreditRepository.findAll().sort((movementCredit1, movementCredit2) -> movementCredit1
@@ -45,12 +57,25 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 
 	@Override
 	public Mono<MovementCredit> save(MovementCredit movementCredit) {
-		Long key = generateKey(MovementCredit.class.getSimpleName());
-		if (key >= 1) {
-			movementCredit.setIdMovementCredit(key);
-			movementCredit.setCreationDate(Calendar.getInstance().getTime());
-			log.info("SAVE[product]:" + movementCredit.toString());
+		// Long key = generateKey(MovementCredit.class.getSimpleName());
+		// if (key >= 1) {
+
+		Long idMovementCredit,count;
+		count = this.findAll().collect(Collectors.counting()).blockOptional().get();
+		if (count != null) {
+			if (count <= 0) {
+				idMovementCredit = Long.valueOf(0);
+			} else {
+				idMovementCredit = this.findAll()
+						.collect(Collectors.maxBy(Comparator.comparing(MovementCredit::getIdMovementCredit)))
+						.blockOptional().get().get().getIdMovementCredit();
+			}
+		} else {
+			idMovementCredit = Long.valueOf(0);
 		}
+		movementCredit.setIdMovementCredit( idMovementCredit + 1);
+		movementCredit.setCreationDate(Calendar.getInstance().getTime());
+		// }
 		return movementCreditRepository.insert(movementCredit);
 	}
 
@@ -71,50 +96,102 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 
 	@Override
 	public Mono<Map<String, Object>> recordsMovement(MovementCredit movementCredit) {
+		log.info("recordsMovement[MovementCredit]:"+movementCredit);
 		Map<String, Object> hashMap = new HashMap<String, Object>();
 		CreditAccount credit = this.findByIdCredit(movementCredit.getIdCreditAccount());
-		if (credit != null) {
-			if (movementCredit.getTypeMovementCredit() == TypeMovementCredit.charge) {
-				return this.findAll().filter(o -> (o.getIdCreditAccount() == movementCredit.getIdCreditAccount()
-				// && o.getTypeMovementCredit() == TypeMovementCredit.cargo
-				))
-						//
-						.map(mov -> {
-							if (mov.getTypeMovementCredit() == TypeMovementCredit.charge) {
-								mov.setAmount(-1 * mov.getAmount());
-							}
-							// log.info("Change:"+mov.toString());
-							return mov;
-						})
-						//
-						.collect(Collectors.summingDouble(MovementCredit::getAmount)).map(_saldo -> {
-							log.info("Saldo [Abono-Cargo]:" + _saldo);
-							log.info("Credit:" + credit.toString());
-							log.info("Saldo disponible:" + (_saldo + credit.getAmountCreditLimit()));
-							if (movementCredit.getAmount() <= (_saldo + credit.getAmountCreditLimit())) {
-								log.info("Registra Movimiento:");
-								hashMap.put("CreditSucces", "Registro de movimiento de " + movementCredit.getTypeMovementCredit());
-								hashMap.put("Credit", movementCredit);
-								movementCredit.setDateMovement(Calendar.getInstance().getTime());
-								this.save(movementCredit).subscribe(e -> log.info("Save:" + e.toString()));
 
-							} else {
-								hashMap.put("CreditAccount",
-										"El saldo de la cuenta de credito supera el limite de credito.Saldo disponible:"
-												+ (_saldo + credit.getAmountCreditLimit()));
-								log.info("El cargo a la cuenta de credito supera el limite de credito.");
-							}
+		if (credit != null) {
+			// Cantidad de movimientos
+			SimpleDateFormat mmyyyy = new SimpleDateFormat("MM/yyyy");
+			Long cantsMovi = this.findAll()
+					.filter(fil -> mmyyyy.format(fil.getDateMovement())
+							.equals(mmyyyy.format(Calendar.getInstance().getTime())))
+					.collect(Collectors.counting()).map(cant -> {
+						return cant;
+					}).blockOptional().get();
+			Product product = productFeignClient.findById(credit.getIdProducto());
+			if (product != null) {
+				Configuration configuration = configurationFeingClient.findById(product.getIdConfiguration());
+				if (configuration != null) {
+					/**
+					 * Todas las cuentas bancarias tendrán un número máximo de transacciones
+					 * (depósitos y retiros) que no cobrará comisión y superado ese número se
+					 * cobrará comisión por cada transacción realizada.
+					 */
+					if (configuration.getQuantityMovement() != null && configuration.getQuantityMovement() >= 1) {
+						if (configuration.getQuantityMovement() < cantsMovi) {
+							movementCredit.setCommissionForTransaction(configuration.getTransactionFee());
+						}
+					} else {
+						movementCredit.setCommissionForTransaction(0.00);
+					}
+					if (movementCredit.getTypeMovementCredit() == TypeMovementCredit.charge) {
+						 Double _saldo= this.findAll()
+								.filter(o -> (o.getIdCreditAccount() == movementCredit.getIdCreditAccount()))
+								.map(mov -> {
+									if (mov.getTypeMovementCredit() == TypeMovementCredit.charge) {
+										mov.setAmount(-1 * mov.getAmount());
+									}
+									return mov;
+								})							 
+								.collect(Collectors.summingDouble(MovementCredit::getAmount)).blockOptional().get();
+								//.map(_saldo -> {
+									log.info("Saldo [Abono-Cargo]:" + _saldo);
+									log.info("Credit:" + credit.toString());
+									log.info("Saldo disponible:" + (_saldo
+											+ (credit.getAmountCreditLimit() != null ? credit.getAmountCreditLimit()
+													: 0.00)));
+
+									if (movementCredit.getAmount() <= (_saldo
+											+ (credit.getAmountCreditLimit() != null ? credit.getAmountCreditLimit()
+													: 0.00))) {
+										log.info("Registra Movimiento:");
+										movementCredit.setDateMovement(Calendar.getInstance().getTime());
+										this.save(movementCredit).map(_obj -> {
+											hashMap.put("CreditSucces", "Registro de movimiento de "
+													+ movementCredit.getTypeMovementCredit());
+											hashMap.put("MovementCredit", movementCredit);
+											hashMap.put("status", "success");
+											hashMap.put("idMovementCredit", movementCredit.getIdMovementCredit());
+											return _obj;
+										})
+
+												.subscribe(e -> log.info("Save:" + e.toString()));
+
+									} else {
+										hashMap.put("CreditAccount",
+												"El saldo de la cuenta de credito supera el limite de credito.Saldo disponible:"
+														+ (_saldo + (credit.getAmountCreditLimit() != null
+																? credit.getAmountCreditLimit()
+																: 0.00)));
+										hashMap.put("status", "error");
+										log.info("El cargo a la cuenta de credito supera el limite de credito.");
+									}
+									return Mono.just(hashMap);
+								//});
+					} else {
+						movementCredit.setDateMovement(Calendar.getInstance().getTime());
+						return this.save(movementCredit).map(_value -> {
+							hashMap.put("MovementCredit", _value);
+							hashMap.put("CreditSucces", "Registro de movimiento de " + _value.getTypeMovementCredit());
+							hashMap.put("status", "success");
+							hashMap.put("idMovementCredit", _value.getIdMovementCredit());
 							return hashMap;
 						});
-			} else {
-				movementCredit.setDateMovement(Calendar.getInstance().getTime());
-				return this.save(movementCredit).map(_value -> {
-					hashMap.put("CreditAccount", "Registro de movimiento de " + TypeMovementCredit.charge);
-					return hashMap;
-				});
 
+					}
+
+				} else {
+					hashMap.put("status", "error");
+					hashMap.put("configuration", "configuracion del producto no existe.");
+				}
+			} else {
+				hashMap.put("status", "error");
+				hashMap.put("product", "El producto no existe.");
 			}
+			return Mono.just(hashMap);
 		} else {
+			hashMap.put("status", "error");
 			hashMap.put("credit", "Cuenta de credito no existe.");
 			return Mono.just(hashMap);
 		}
@@ -123,16 +200,8 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 
 	@Override
 	public CreditAccount findByIdCredit(Long idCreditAccount) {
-		/*
-		 * log.info(creditService + "/" + idCredit); ResponseEntity<Credit> responseGet
-		 * = restTemplate.exchange(creditService + "/" + idCredit, HttpMethod.GET, null,
-		 * new ParameterizedTypeReference<Credit>() { }); if
-		 * (responseGet.getStatusCode() == HttpStatus.OK) { return
-		 * responseGet.getBody(); } else { return null; }
-		 */
-
 		CreditAccount credit = creditFeignClient.creditfindById(idCreditAccount);
-		//log.info("CreditFeignClient: " + credit.toString());
+		// log.info("CreditFeignClient: " + credit.toString());
 		return credit;
 	}
 
@@ -164,56 +233,7 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 
 	@Override
 	public Long generateKey(String nameTable) {
-		/*
-		 * log.info(tableIdService + "/generateKey/" + nameTable); ResponseEntity<Long>
-		 * responseGet = restTemplate.exchange(tableIdService + "/generateKey/" +
-		 * nameTable, HttpMethod.GET, null, new ParameterizedTypeReference<Long>() { });
-		 * if (responseGet.getStatusCode() == HttpStatus.OK) { log.info("Body:"+
-		 * responseGet.getBody()); return responseGet.getBody(); } else { return
-		 * Long.valueOf(0); }
-		 */
-
 		return tableIdFeignClient.generateKey(nameTable);
 	}
 
-	/*
-	 * @Override public List<MovementCredit> findAllList() {
-	 * ResponseEntity<List<MovementCredit>> responseGet =
-	 * restTemplate.exchange("http://localhost:8085/movementCredit", HttpMethod.GET,
-	 * null, new ParameterizedTypeReference<List<MovementCredit>>() { }); if
-	 * (responseGet.getStatusCode() == HttpStatus.OK) { return
-	 * responseGet.getBody(); } else { return null; } }
-	 */
-
 }
-
-/*
- * credit = this.findByIdProduc(movementCredit.getIdCredit());
- * Mono.just(this.findAll()
- * .takeUntil(objCredit->objCredit.getIdCredit()==movementCredit.getIdCredit())
- * .collectList().map(e->e))
- * 
- * .subscribe(z->log.info(z.toString()));
- */
-
-// this.findAllList().forEach(e->log.info(e.toString()));
-
-// Mono<List<MovementCredit>>l=
-/*
- * this.findAll()
- * //.groupBy(objCredit->objCredit.getIdCredit()==movementCredit.getIdCredit())
- * 
- * .takeUntil(objCredit->objCredit.getIdCredit()==movementCredit.getIdCredit())
- * //.flatMap(idFlux -> idFlux.collectList()) .subscribe(e->{
- * Flux.fromIterable(e.)
- * //.takeUntil(_ob->_ob.getIdCredit()==movementCredit.getIdCredit())
- * .collect(Collectors.summingDouble(MovementCredit::getAmount))
- * .subscribe(eFlux->log.info("Suma:"+eFlux.toString()));
- * 
- * });
- */
-// .collect(Collectors.summingDouble(MovementCredit::getAmount))
-// .subscribe(e->log.info("Total:"+e));
-
-// l.collect(Collectors.summingDouble(MovementCredit::getAmount)) ;
-// .takeUntil(objCredit->objCredit.getIdCredit()==movementCredit.getIdCredit()).fl;
