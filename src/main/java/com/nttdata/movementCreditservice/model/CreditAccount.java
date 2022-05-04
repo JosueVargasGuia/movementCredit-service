@@ -9,7 +9,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public final class CreditAccount extends Account {
 	private Long idCreditAccount;
-	private Long idProducto;
+	private Long idProduct;
 	private Double amountCreditLimit;
 	private Long idAccount;
 }

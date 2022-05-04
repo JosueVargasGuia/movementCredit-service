@@ -109,7 +109,7 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 					.collect(Collectors.counting()).map(cant -> {
 						return cant;
 					}).blockOptional().get();
-			Product product = productFeignClient.findById(credit.getIdProducto());
+			Product product = productFeignClient.findById(credit.getIdProduct());
 			if (product != null) {
 				Configuration configuration = configurationFeingClient.findById(product.getIdConfiguration());
 				if (configuration != null) {
@@ -154,9 +154,9 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 											hashMap.put("status", "success");
 											hashMap.put("idMovementCredit", movementCredit.getIdMovementCredit());
 											return _obj;
-										})
+										}).blockOptional().get();
 
-												.subscribe(e -> log.info("Save:" + e.toString()));
+												//.subscribe(e -> log.info("Save:" + e.toString()));
 
 									} else {
 										hashMap.put("CreditAccount",
@@ -167,6 +167,7 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 										hashMap.put("status", "error");
 										log.info("El cargo a la cuenta de credito supera el limite de credito.");
 									}
+									log.info("hashMap:"+hashMap);
 									return Mono.just(hashMap);
 								//});
 					} else {
@@ -220,12 +221,14 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 				log.info("balanceInquiry:" + _value);
 				return _value;
 			}).map(value -> {
-				hashMap.put("Status", "El saldo de la cuenta es de:" + value);
+				hashMap.put("StatusBalance", "El saldo de la cuenta es de:" + value);
 				hashMap.put("creditBalance", value);
 				hashMap.put("Credit", credit);
+				hashMap.put("status", "success");
 				return hashMap;
 			});
 		} else {
+			hashMap.put("status", "error");
 			hashMap.put("credit", "Cuenta de credito no existe.");
 			return Mono.just(hashMap);
 		}
