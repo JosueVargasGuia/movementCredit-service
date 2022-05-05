@@ -3,8 +3,6 @@ package com.nttdata.movementCreditservice.controller;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -17,21 +15,24 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.nttdata.movementCreditservice.entity.MovementCredit;
-import com.nttdata.movementCreditservice.service.MovementCreditService;
-import com.nttdata.movementCreditservice.model.CreditAccount;
 
+import com.nttdata.movementCreditservice.entity.MovementCredit;
+import com.nttdata.movementCreditservice.model.CreditAccount;
+import com.nttdata.movementCreditservice.service.MovementCreditService;
+
+import lombok.extern.log4j.Log4j2;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+@Log4j2
 @RestController
 @RequestMapping("/movementCredit")
 public class MovementCreditController {
-	Logger log = LoggerFactory.getLogger(MovementCreditController.class);
+	
+	
 	@Autowired
 	MovementCreditService movementCreditService;
 
-	// RestTemplate restTemplate=new RestTemplate();
 
 	@GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
 	public Flux<MovementCredit> findAll() {
@@ -78,14 +79,6 @@ public class MovementCreditController {
 
 	@DeleteMapping(value = "/{idMovementCredit}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public Mono<ResponseEntity<Void>> delete(@PathVariable(name = "idMovementCredit") long idMovementCredit) {
-		/*
-		 * return movementCreditService.findById(idMovementCredit).map(movementCredit ->
-		 * { movementCreditService.delete(movementCredit.getIdMovementCredit()); return
-		 * ResponseEntity.ok().body(movementCredit); }).onErrorResume(e -> {
-		 * log.info("Status:" + HttpStatus.BAD_REQUEST + " menssage" + e.getMessage());
-		 * return Mono.just(ResponseEntity.badRequest().build());
-		 * }).defaultIfEmpty(ResponseEntity.noContent().build());
-		 */
 		return movementCreditService.findById(idMovementCredit).flatMap(movementCredit -> {
 			return movementCreditService.delete(movementCredit.getIdMovementCredit())
 					.then(Mono.just(ResponseEntity.ok().build()));
@@ -115,5 +108,11 @@ public class MovementCreditController {
 					hashMap.put("Error", e.getMessage());
 					return Mono.just(ResponseEntity.badRequest().body(hashMap));
 				}).defaultIfEmpty(ResponseEntity.noContent().build());
+	}
+	
+	
+	@GetMapping(value="/findAllByCustomer/{idCustomer}", produces = MediaType.APPLICATION_JSON_VALUE)
+	public Flux<MovementCredit> findAllByCustomer(@PathVariable("idCustomer") Long idCustomer){
+		return movementCreditService.findAllByCustomer(idCustomer);
 	}
 }

@@ -172,6 +172,7 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 								//});
 					} else {
 						movementCredit.setDateMovement(Calendar.getInstance().getTime());
+						movementCredit.setIdCustomer(credit.getIdCustomer());
 						return this.save(movementCredit).map(_value -> {
 							hashMap.put("MovementCredit", _value);
 							hashMap.put("CreditSucces", "Registro de movimiento de " + _value.getTypeMovementCredit());
@@ -237,6 +238,12 @@ public class MovementCreditServiceImpl implements MovementCreditService {
 	@Override
 	public Long generateKey(String nameTable) {
 		return tableIdFeignClient.generateKey(nameTable);
+	}
+
+	@Override
+	public Flux<MovementCredit> findAllByCustomer(Long idCustomer) {
+		// listar todos los movimientos y filtrarlos segun el idCreditAccount
+		return movementCreditRepository.findAll().filter(x->x.getIdCustomer()==idCustomer);
 	}
 
 }
