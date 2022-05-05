@@ -26,6 +26,7 @@ public interface MovementCreditService {
 	Mono<Map<String, Object>> balanceInquiry(CreditAccount creditAccount);
 
 	Long generateKey(String nameTable);
-	// List<MovementCredit> findAllList();
+	
+	Flux<MovementCredit> findAllByCustomer(Long idCustomer);
 
 }
